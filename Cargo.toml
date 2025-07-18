@@ -1,0 +1,22 @@
+[package]
+name = "rinha2025"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "api"
+path = "src/main.rs"
+
+[[bin]]
+name = "worker"
+path = "src/bin/worker.rs"
+
+
+[dependencies]
+axum = "0.8.4"
+tokio = {version = "1.46.1", features = ["full"]}
+serde = { version = "1.0.219", features = ["derive"] }
+reqwest = { version = "0.12.22", features = ["json"] }
+serde_json = "1.0.140"
+redis = {version = "0.32.3", features = ["tokio-comp", "connection-manager", "cluster", "cluster-async"] }
+chrono = "0.4.41"
