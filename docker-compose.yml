@@ -1,34 +1,32 @@
+x-api_template: &api_template
+  image: andersongomes001/rinha-api-2025:latest
+  environment:
+    PAYMENT_PROCESSOR_DEFAULT_URL: "http://payment-processor-default:8080"
+    PAYMENT_PROCESSOR_FALLBACK_URL: "http://payment-processor-fallback:8080"
+    REDIS_URL: "redis://redis:6379/"
+    PORT: 80
+  networks:
+    - backend
+    - payment-processor
+  deploy:
+    resources:
+      limits:
+        cpus: "0.3"
+        memory: "80MB"
+
 services:
-  api_template: &api_template
-    image: andersongomes001/rinha-api-2025:latest
-    environment:
-      PAYMENT_PROCESSOR_DEFAULT_URL: "http://payment-processor-default:8080"
-      PAYMENT_PROCESSOR_FALLBACK_URL: "http://payment-processor-fallback:8080"
-      REDIS_URL: "redis://redis:6379/"
-      PORT: 80
-    networks:
-      - backend
-      - payment-processor
-    deploy:
-      resources:
-        limits:
-          cpus: "0.3"
-          memory: "80MB"
   api01:
     <<: *api_template
     hostname: api01
-    container_name: andersongomes001_api01
     depends_on:
       - redis
   api02:
     <<: *api_template
     hostname: api02
-    container_name: andersongomes001_api02
     depends_on:
       - redis
   redis:
     image: redis:8.0.3-alpine
-    container_name: andersongomes001_redis
     hostname: redis
     networks:
       - backend
@@ -41,7 +39,6 @@ services:
           cpus: "0.3"
           memory: "50MB"
   nginx:
-    container_name: andersongomes001_nginx
     image: nginx
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
@@ -59,6 +56,5 @@ services:
           memory: "90MB"
 networks:
   backend:
-    driver: bridge
   payment-processor:
     external: true
