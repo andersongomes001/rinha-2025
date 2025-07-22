@@ -7,9 +7,9 @@ edition = "2021"
 name = "api"
 path = "src/main.rs"
 
-[[bin]]
-name = "worker"
-path = "src/bin/worker.rs"
+[profile.release]
+lto = true
+codegen-units = 1
 
 
 [dependencies]

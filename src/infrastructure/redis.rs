@@ -15,7 +15,7 @@ pub async fn store_summary(conn: &mut ConnectionManager, key_prefix: &str, id: &
         .atomic()
         .hset(format!("summary:{}:data", key_prefix), id, amount)
         .zadd(format!("summary:{}:history", key_prefix), id, timestamp_ms)
-        .lrem(QUEUE_FAILED_KEY, 1, json)
+        //.lrem(QUEUE_FAILED_KEY, 1, json)
         .query_async(conn)
         .await
 }

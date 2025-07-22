@@ -11,8 +11,8 @@ x-api_template: &api_template
   deploy:
     resources:
       limits:
-        cpus: "0.3"
-        memory: "80MB"
+        cpus: "0.5"
+        memory: "115MB"
 
 services:
   api01:
@@ -52,8 +52,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.3"
-          memory: "90MB"
+          cpus: "0.2"
+          memory: "70MB"
 networks:
   backend:
   payment-processor:
