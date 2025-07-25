@@ -7,10 +7,24 @@ use axum::{
 };
 use redis::AsyncCommands;
 use std::string::String;
+use std::sync::Arc;
+use std::time::Instant;
+use redis::aio::ConnectionManager;
 use crate::domain::entities::{AppState, PaymentsSummary, PaymentsSummaryFilter, SummaryData};
 use crate::PostPayments;
 
-pub async fn clear_redis(
+pub async fn clear_redis(redis: Arc<ConnectionManager> ){
+    let mut conn = (*redis).clone();
+    match AsyncCommands::flushall::<String>(&mut conn).await {
+        Ok(_) => {
+            println!("Redis cache cleared successfully.");
+        },
+        Err(_) => {
+            println!("Failed to clear Redis cache.");
+        }
+    }
+}
+/*pub async fn clear_redis(
     State(state): State<AppState>
 ) -> StatusCode {
     let mut conn = (*state.redis).clone();
@@ -22,7 +36,7 @@ pub async fn clear_redis(
             StatusCode::INTERNAL_SERVER_ERROR
         }
     }
-}
+}*/
 
 pub async fn payments(
     State(state): State<AppState>,
@@ -47,12 +61,13 @@ pub async fn payments_summary(
     let to = date_to_ts(params.to.clone().unwrap_or_else(|| "1970-01-01T00:00:00Z".to_string()));
     //println!("from: {}", from);
     //println!("to: {}", to);
-
+    let start = Instant::now();
     let ids_default: Vec<String> = AsyncCommands::zrangebyscore(&mut conn, "summary:default:history", from, to).await.unwrap_or_default();
     let amounts_default: Vec<f64> = AsyncCommands::hget(&mut conn,"summary:default:data", &ids_default).await.unwrap_or_default();
 
     let ids_fallback: Vec<String> = AsyncCommands::zrangebyscore(&mut conn,"summary:fallback:history", from, to).await.unwrap_or_default();
     let amounts_fallback: Vec<f64> = AsyncCommands::hget(&mut conn,"summary:fallback:data", &ids_fallback).await.unwrap_or_default();
+    println!("Summary gerado em {:?}", start.elapsed());
 
     let sumary = PaymentsSummary {
         default: SummaryData {

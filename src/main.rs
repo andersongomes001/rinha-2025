@@ -30,10 +30,13 @@ async fn main() {
             return;
         }
     };
+    let connection_for_clear = Arc::clone(&connection);
+    clear_redis(connection_for_clear).await;
+
 
     let rx = Arc::new(Mutex::new(rx));
 
-    for _ in 0..1 {
+    for _ in 0..5 {
         let connection_for_worker = Arc::clone(&connection);
         let client_clone = Arc::clone(&client);
         let rx_clone = Arc::clone(&rx);
@@ -89,7 +92,7 @@ async fn main() {
     let app = Router::new()
         .route("/payments", post(payments))
         .route("/payments-summary", get(payments_summary))
-        .route("/clear_redis",get(clear_redis))
+        //.route("/clear_redis",get(clear_redis))
         .with_state(AppState {
             redis: Arc::clone(&connection),
             sender: tx,
