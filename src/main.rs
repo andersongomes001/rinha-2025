@@ -5,16 +5,26 @@ use axum::{
 use redis::aio::ConnectionManager;
 use reqwest::Client;
 use rinha2025::api::handlers::{clear_redis, payments, payments_summary};
+use rinha2025::application::process;
+use rinha2025::domain::entities::{AppState, PostPayments};
+use rinha2025::infrastructure::config::HOST_ROLE;
+use rinha2025::infrastructure::health::start_service_health;
+use rinha2025::infrastructure::redis::get_redis_connection;
+use rinha2025::infrastructure::{run_master, run_slave};
 use std::env;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
-use rinha2025::application::process;
-use rinha2025::domain::entities::{AppState, PostPayments};
-use rinha2025::infrastructure::redis::get_redis_connection;
 
 #[tokio::main]
 async fn main() {
-    //start_service_health();
+    if HOST_ROLE.as_str() == "master" {
+        start_service_health();
+        run_master().await;
+    }
+    if HOST_ROLE.as_str() == "slave" {
+        run_slave().await;
+    }
+
     let (tx, rx) = mpsc::channel::<PostPayments>(100_000);
     let tx_for_worker = tx.clone();
     let port = env::var("PORT").unwrap_or("9999".to_string());
@@ -36,6 +46,7 @@ async fn main() {
 
     let rx = Arc::new(Mutex::new(rx));
 
+    // Cria 5 workers para processar os pagamentos
     for _ in 0..5 {
         let connection_for_worker = Arc::clone(&connection);
         let client_clone = Arc::clone(&client);

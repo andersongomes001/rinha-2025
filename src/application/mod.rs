@@ -1,5 +1,5 @@
 pub mod services;
 
 pub use services::{
-    process
+    process,escolher_rota_async
 };

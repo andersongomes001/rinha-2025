@@ -1,10 +1,8 @@
 x-api_template: &api_template
-  image: andersongomes001/rinha-api-2025:latest
-  environment:
-    PAYMENT_PROCESSOR_DEFAULT_URL: "http://payment-processor-default:8080"
-    PAYMENT_PROCESSOR_FALLBACK_URL: "http://payment-processor-fallback:8080"
-    REDIS_URL: "redis://redis:6379/"
-    PORT: 80
+  image: andersongomes001/rinha-api-2025:107c4f7
+  #build:
+  #  context: .
+  #  dockerfile: Dockerfile
   networks:
     - backend
     - payment-processor
@@ -18,13 +16,28 @@ services:
   api01:
     <<: *api_template
     hostname: api01
+    environment:
+      PAYMENT_PROCESSOR_DEFAULT_URL: "http://payment-processor-default:8080"
+      PAYMENT_PROCESSOR_FALLBACK_URL: "http://payment-processor-fallback:8080"
+      REDIS_URL: "redis://redis:6379/"
+      PORT: 80
+      HOST_ROLE: "master"
+    ports:
+      - "9001:9001"
     depends_on:
       - redis
   api02:
     <<: *api_template
     hostname: api02
+    environment:
+      PAYMENT_PROCESSOR_DEFAULT_URL: "http://payment-processor-default:8080"
+      PAYMENT_PROCESSOR_FALLBACK_URL: "http://payment-processor-fallback:8080"
+      REDIS_URL: "redis://redis:6379/"
+      PORT: 80
+      WS_MASTER_URL: "ws://api01:9001"
     depends_on:
       - redis
+      - api01
   redis:
     image: redis:8.0.3-alpine
     hostname: redis
