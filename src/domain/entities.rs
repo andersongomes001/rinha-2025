@@ -3,17 +3,23 @@ use redis::aio::ConnectionManager;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::Sender;
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct HealthResponse {
     pub failing : bool,
     #[serde(rename = "minResponseTime")]
     pub min_response_time: i64
 }
 
+#[derive(Deserialize, Serialize, Debug,Clone)]
+pub struct HealthStatusAll {
+    pub default: HealthResponse,
+    pub fallback: HealthResponse,
+}
+
 #[derive(Clone)]
 pub struct AppState {
     pub redis: Arc<ConnectionManager>,
-    pub sender: Sender<PostPayments>,
+    pub sender: Sender<PostPayments>
 }
 
 #[derive(Deserialize, Serialize, Debug,Clone)]
@@ -44,3 +50,10 @@ pub struct PostPayments {
 }
 
 pub type AnyError = Box<dyn std::error::Error + Send + Sync>;
+
+#[derive(Debug, PartialEq)]
+pub enum ProcessorDecision {
+    DEFAULT,
+    FALLBACK,
+    FAILING,
+}

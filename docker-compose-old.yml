@@ -1,6 +1,8 @@
 x-api_template: &api_template
-  #image: rinha-dev
   image: andersongomes001/rinha-api-2025:latest
+  #build:
+  #  context: .
+  #  dockerfile: Dockerfile
   networks:
     - backend
     - payment-processor
@@ -20,6 +22,8 @@ services:
       REDIS_URL: "redis://redis:6379/"
       PORT: 80
       HOST_ROLE: "master"
+    ports:
+      - "9001:9001"
     depends_on:
       - redis
   api02:
@@ -41,7 +45,7 @@ services:
       - backend
     ports:
       - "6379:6379"
-    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
     deploy:
       resources:
         limits:
