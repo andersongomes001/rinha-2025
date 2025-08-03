@@ -1,6 +1,6 @@
 x-api_template: &api_template
-  #image: rinha-dev
-  image: andersongomes001/rinha-api-2025:ef0bf26
+  image: rinha-dev
+  #image: andersongomes001/rinha-api-2025:7ebe2e6
   networks:
     - backend
     - payment-processor
@@ -19,7 +19,7 @@ services:
       PAYMENT_PROCESSOR_FALLBACK_URL: "http://payment-processor-fallback:8080"
       REDIS_URL: "redis://redis:6379/"
       PORT: 80
-      HOST_ROLE: "master"
+      INSTANCE_ROLE: "master"
     depends_on:
       - redis
   api02:
@@ -30,6 +30,7 @@ services:
       PAYMENT_PROCESSOR_FALLBACK_URL: "http://payment-processor-fallback:8080"
       REDIS_URL: "redis://redis:6379/"
       PORT: 80
+      INSTANCE_ROLE: "slave"
       WS_MASTER_URL: "ws://api01:9001"
     depends_on:
       - redis

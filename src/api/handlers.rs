@@ -1,15 +1,14 @@
+use crate::domain::entities::{AppState, PaymentsSummary, PaymentsSummaryFilter, SummaryData};
 use crate::infrastructure::{date_to_ts, round2};
+use crate::PostPayments;
 use axum::extract::{Query, State};
 use axum::{
     http::StatusCode,
     Json,
 };
+use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
 use std::string::String;
-use redis::aio::ConnectionManager;
-use tokio::sync::mpsc::error::TrySendError;
-use crate::domain::entities::{AppState, PaymentsSummary, PaymentsSummaryFilter, SummaryData};
-use crate::PostPayments;
 
 pub async fn clear_redis(
     State(state): State<AppState>

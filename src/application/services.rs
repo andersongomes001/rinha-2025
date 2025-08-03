@@ -39,7 +39,7 @@ pub async fn process(payment_json: String, conn: Arc<ConnectionManager>, client:
         is_failed = true;
     }
 
-    if (decision == ProcessorDecision::FALLBACK || is_failed) {
+    if decision == ProcessorDecision::FALLBACK || is_failed {
         let fallback_request = payments_request(&client, PAYMENT_PROCESSOR_FALLBACK_URL.as_str().parse().unwrap(), &payload).await?;
         let status = fallback_request.status();
         if status.is_success() {

@@ -23,10 +23,12 @@ pub async fn run_master() {
                         default: HealthResponse {
                             failing: global_status.default.failing,
                             min_response_time: global_status.default.min_response_time,
+                            failing_since: global_status.default.failing_since
                         },
                         fallback: HealthResponse {
                             failing: global_status.fallback.failing,
                             min_response_time: global_status.fallback.min_response_time,
+                            failing_since: global_status.fallback.failing_since
                         },
                     };
                     let json = serde_json::to_string(&data).unwrap();

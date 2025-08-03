@@ -1,13 +1,14 @@
-use std::sync::Arc;
 use redis::aio::ConnectionManager;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct HealthResponse {
     pub failing : bool,
     #[serde(rename = "minResponseTime")]
-    pub min_response_time: i64
+    pub min_response_time: i64,
+    pub failing_since: Option<u64>,
 }
 
 #[derive(Deserialize, Serialize, Debug,Clone)]
@@ -51,7 +52,7 @@ pub struct PostPayments {
 
 pub type AnyError = Box<dyn std::error::Error + Send + Sync>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Deserialize, Serialize,Debug, PartialEq)]
 pub enum ProcessorDecision {
     DEFAULT,
     FALLBACK,

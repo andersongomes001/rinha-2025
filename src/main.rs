@@ -6,17 +6,14 @@ use redis::aio::ConnectionManager;
 use reqwest::Client;
 use rinha2025::api::handlers::{payments, payments_summary};
 use rinha2025::application::process;
-use rinha2025::domain::entities::{AppState, PaymentsSummary, PostPayments, ProcessorDecision};
+use rinha2025::domain::entities::{AppState, PostPayments, ProcessorDecision};
+use rinha2025::infrastructure::config::INSTANCE_ROLE;
+use rinha2025::infrastructure::health::{get_best_processor, start_service_health};
 use rinha2025::infrastructure::redis::get_redis_connection;
+use rinha2025::infrastructure::{run_master, run_slave};
 use std::env;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
-use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
-use tracing::Level;
-use tracing_subscriber::EnvFilter;
-use rinha2025::infrastructure::config::HOST_ROLE;
-use rinha2025::infrastructure::health::{get_best_processor, start_service_health};
-use rinha2025::infrastructure::{run_master, run_slave};
 
 #[tokio::main]
 async fn main() {
@@ -24,15 +21,15 @@ async fn main() {
         .with_env_filter(EnvFilter::from_default_env().add_directive("info".parse().unwrap()))
         .init();*/
 
-    if HOST_ROLE.as_str() == "master" {
+    if INSTANCE_ROLE.as_str() == "master" {
         start_service_health();
         run_master().await;
     }
-    if HOST_ROLE.as_str() == "slave" {
+    if INSTANCE_ROLE.as_str() == "slave" {
         run_slave().await;
     }
     let workers = std::cmp::max(1, num_cpus::get());
-    let (tx, mut rx) = mpsc::channel::<PostPayments>(200_000);
+    let (tx, rx) = mpsc::channel::<PostPayments>(200_000);
     let tx_for_worker = tx.clone();
     let port = env::var("PORT").unwrap_or("9999".to_string());
     let client = Arc::new(Client::builder()
@@ -63,6 +60,7 @@ async fn main() {
 
             loop {
                 let decision = get_best_processor().await;
+                //println!("{:?}", decision);
                 if decision == ProcessorDecision::FAILING {
                     eprintln!("Processor em estado FAILING. Aguardando...");
                     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
