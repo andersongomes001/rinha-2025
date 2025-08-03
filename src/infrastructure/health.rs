@@ -40,7 +40,6 @@ async fn check_health(client: &Client, base_url: String, is_default: bool) {
 }
 
 pub async fn get_best_processor() -> ProcessorDecision {
-    const LIMIAR_DEFAULT_MS: i64 = 2000;
     let health = GLOBAL_HEALTH_STATUS.read().await;
     if health.default.failing && health.fallback.failing {
         return ProcessorDecision::FAILING;
@@ -51,8 +50,5 @@ pub async fn get_best_processor() -> ProcessorDecision {
     if health.fallback.failing {
         return ProcessorDecision::DEFAULT;
     }
-    if health.default.min_response_time <= LIMIAR_DEFAULT_MS {
-        return ProcessorDecision::DEFAULT;
-    }
-    ProcessorDecision::FALLBACK
+    ProcessorDecision::DEFAULT
 }
