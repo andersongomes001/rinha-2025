@@ -11,7 +11,6 @@ use rinha2025::infrastructure::redis::get_redis_connection;
 use std::env;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
-use tower_http::follow_redirect::policy::PolicyExt;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::Level;
 use tracing_subscriber::EnvFilter;
@@ -32,7 +31,7 @@ async fn main() {
     if HOST_ROLE.as_str() == "slave" {
         run_slave().await;
     }
-    let workers = std::cmp::max(2, num_cpus::get());
+    let workers = std::cmp::max(1, num_cpus::get());
     let (tx, mut rx) = mpsc::channel::<PostPayments>(200_000);
     let tx_for_worker = tx.clone();
     let port = env::var("PORT").unwrap_or("9999".to_string());
@@ -72,11 +71,11 @@ async fn main() {
                     let decision = get_best_processor().await;
                     if decision == ProcessorDecision::FAILING {
                         if let Err(e) = tx_for_worker.send(post_payments).await {
-                            eprintln!("Erro ao tentar colocar o pagamento na fila novamente: {:?}", e);
+                            eprintln!("Falha ao recolocar na fila FAILING: {:?}", e);
                         } else {
-                            eprintln!("Pagamento recolocado na fila.");
+                            eprintln!("Pagamento recolocado na fila FAILING.");
                         }
-                        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
                         continue;
                     }
 

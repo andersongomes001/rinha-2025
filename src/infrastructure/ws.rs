@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use futures::{SinkExt, StreamExt};
 use tokio::net::TcpListener;
 use tokio_tungstenite::{accept_async, connect_async};
@@ -55,10 +54,11 @@ pub async fn run_slave() {
                                 let json = msg.to_text().unwrap();
                                 match serde_json::from_str::<HealthStatusAll>(json) {
                                     Ok(data) => {
-                                        let debug_data = data.clone();
+                                        //let debug_data = data.clone();
+                                        //println!("default: {:?}, fallback: {:?}", debug_data.default, debug_data.fallback);
                                         GLOBAL_HEALTH_STATUS.write().await.default = data.default;
                                         GLOBAL_HEALTH_STATUS.write().await.fallback = data.fallback;
-                                        println!("default: {:?}, fallback: {:?}", debug_data.default, debug_data.fallback);
+
                                     }
                                     Err(err) => {
                                         eprintln!("[CLIENTE] Erro ao parsear JSON: {err}");

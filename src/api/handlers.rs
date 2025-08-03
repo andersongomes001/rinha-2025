@@ -29,13 +29,9 @@ pub async fn payments(
     State(state): State<AppState>,
     Json(payload): Json<PostPayments>,
 ) -> StatusCode {
-    match state.sender.try_send(payload) {
+    match state.sender.send(payload).await {
         Ok(_) => StatusCode::CREATED,
-        Err(TrySendError::Full(_)) => {
-            tracing::warn!("Fila cheia: rejeitando requisição /payments");
-            StatusCode::TOO_MANY_REQUESTS
-        },
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        Err(_) =>  StatusCode::TOO_MANY_REQUESTS,
     }
 }
 

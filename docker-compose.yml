@@ -1,6 +1,6 @@
 x-api_template: &api_template
-  #image: rinha-dev
-  image: andersongomes001/rinha-api-2025:latest
+  image: rinha-dev
+  #image: andersongomes001/rinha-api-2025:c17afa2
   networks:
     - backend
     - payment-processor
@@ -8,7 +8,7 @@ x-api_template: &api_template
     resources:
       limits:
         cpus: "0.5"
-        memory: "115MB"
+        memory: "100MB"
 
 services:
   api01:
@@ -47,12 +47,13 @@ services:
         limits:
           cpus: "0.3"
           memory: "50MB"
-  nginx:
-    image: nginx
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  haproxy:
+    image: haproxy:2.8
+    container_name: haproxy
     ports:
       - "9999:80"
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     depends_on:
       - api01
       - api02
@@ -62,7 +63,8 @@ services:
       resources:
         limits:
           cpus: "0.2"
-          memory: "70MB"
+          memory: "100MB"
+
 networks:
   backend:
   payment-processor:

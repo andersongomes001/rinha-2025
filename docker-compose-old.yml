@@ -71,3 +71,41 @@ networks:
   backend:
   payment-processor:
     external: true
+
+
+
+  nginx:
+    image: nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "9999:80"
+    depends_on:
+      - api01
+      - api02
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "140MB"
+
+
+
+  envoy:
+    image: envoyproxy/envoy:v1.33-latest
+    ports:
+      - "9999:80"
+    volumes:
+      - ./envoy.yaml:/etc/envoy/envoy.yaml
+    depends_on:
+      - api01
+      - api02
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: "70MB"
