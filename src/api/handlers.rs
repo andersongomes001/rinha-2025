@@ -29,7 +29,7 @@ pub async fn payments(
     State(state): State<AppState>,
     Json(payload): Json<PostPayments>,
 ) -> StatusCode {
-    match state.sender.send(payload).await {
+    match state.sender.try_send(payload) {
         Ok(_) => StatusCode::CREATED,
         Err(_) =>  StatusCode::TOO_MANY_REQUESTS,
     }

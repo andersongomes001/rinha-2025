@@ -25,9 +25,9 @@ pub async fn process(payment_json: String, conn: Arc<ConnectionManager>, client:
         "requestedAt" : timestamp_str
     });
     let id = format!("{}", payment.correlation_id);
-
+    let mut is_failed = false;
     if decision == ProcessorDecision::DEFAULT {
-        //for _ in 0..5 {
+        for _ in 0..5 {
             let normal_request = payments_request(&client, PAYMENT_PROCESSOR_DEFAULT_URL.as_str().parse().unwrap(), &payload).await?;
             let status = normal_request.status();
             if status.is_success() {
@@ -35,10 +35,11 @@ pub async fn process(payment_json: String, conn: Arc<ConnectionManager>, client:
                 return Ok(());
             }
             tokio::time::sleep(Duration::from_millis(500)).await;
-        //}
+        }
+        is_failed = true;
     }
 
-    if decision == ProcessorDecision::FALLBACK {
+    if (decision == ProcessorDecision::FALLBACK || is_failed) {
         let fallback_request = payments_request(&client, PAYMENT_PROCESSOR_FALLBACK_URL.as_str().parse().unwrap(), &payload).await?;
         let status = fallback_request.status();
         if status.is_success() {

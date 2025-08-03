@@ -62,23 +62,19 @@ async fn main() {
             let conn_clone = Arc::clone(&connection_for_worker);
 
             loop {
+                let decision = get_best_processor().await;
+                if decision == ProcessorDecision::FAILING {
+                    eprintln!("Processor em estado FAILING. Aguardando...");
+                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    continue;
+                }
+
                 let maybe_payment = {
                     let mut rx_guard = rx_clone.lock().await;
                     rx_guard.recv().await
                 };
 
                 if let Some(post_payments) = maybe_payment {
-                    let decision = get_best_processor().await;
-                    if decision == ProcessorDecision::FAILING {
-                        if let Err(e) = tx_for_worker.send(post_payments).await {
-                            eprintln!("Falha ao recolocar na fila FAILING: {:?}", e);
-                        } else {
-                            eprintln!("Pagamento recolocado na fila FAILING.");
-                        }
-                            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-                        continue;
-                    }
-
                     let payload = serde_json::to_string(&post_payments).unwrap();
                     if let Err(e) = process(payload, conn_clone.clone(), client.clone(), decision).await {
                         eprintln!("Erro ao processar pagamento: {:?}", e);
