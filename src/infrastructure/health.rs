@@ -66,11 +66,10 @@ pub async fn get_best_processor() -> ProcessorDecision {
     if health.default.failing {
         if let Some(start_ms) = health.default.failing_since {
             if let Some(elapsed) = elapsed_since(start_ms) {
-                if elapsed.as_secs() > 10 {
+                if elapsed.as_secs_f32() > 2.0 {
                     return ProcessorDecision::FALLBACK;
                 }
             }
-            return ProcessorDecision::FAILING;
         }
         return ProcessorDecision::FAILING;
     }

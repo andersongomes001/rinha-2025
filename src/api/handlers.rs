@@ -9,6 +9,7 @@ use axum::{
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
 use std::string::String;
+use axum::body::Bytes;
 
 pub async fn clear_redis(
     State(state): State<AppState>
@@ -26,9 +27,10 @@ pub async fn clear_redis(
 
 pub async fn payments(
     State(state): State<AppState>,
-    Json(payload): Json<PostPayments>,
+    //Json(payload): Json<PostPayments>,
+    body: Bytes,
 ) -> StatusCode {
-    match state.sender.try_send(payload) {
+    match state.sender.send(body) {
         Ok(_) => StatusCode::CREATED,
         Err(_) =>  StatusCode::TOO_MANY_REQUESTS,
     }
@@ -39,26 +41,13 @@ pub async fn payments_summary(
     State(state): State<AppState>,
 ) -> (StatusCode, Json<PaymentsSummary>) {
     let mut conn = (*state.redis).clone();
-    let mut summary = PaymentsSummary {
-        default: SummaryData {
-            total_requests: 0,
-            total_amount: 0.0,
-        },
-        fallback: SummaryData {
-            total_requests: 0,
-            total_amount: 0.0,
-        }
-    };
-    if params.from.is_none() && params.to.is_none() {
-        return (StatusCode::OK, Json(summary));
-    }
 
     let from = date_to_ts(params.from.as_deref().unwrap_or("1970-01-01T00:00:00Z").parse().unwrap());
     let to = date_to_ts(params.to.as_deref().unwrap_or("1970-01-01T00:00:00Z").parse().unwrap());
 
     let (amounts_default, amounts_fallback) = get_summary_data(&mut conn, from, to).await;
 
-    summary = PaymentsSummary {
+    let summary = PaymentsSummary {
         default: SummaryData {
             total_requests: amounts_default.len() as i64,
             total_amount: round2(amounts_default.iter().sum::<f64>()),
