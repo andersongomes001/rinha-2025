@@ -13,7 +13,7 @@ use rinha2025::infrastructure::redis::get_redis_connection;
 use rinha2025::infrastructure::{run_master, run_slave};
 use std::env;
 use std::sync::Arc;
-use axum::body::{Body, Bytes};
+use axum::body::{Bytes};
 use tokio::sync::{mpsc, Mutex};
 
 #[tokio::main]
@@ -34,7 +34,7 @@ async fn main() {
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(2);
 
-    let (tx, mut rx) = mpsc::unbounded_channel::<Bytes>();
+    let (tx, rx) = mpsc::unbounded_channel::<Bytes>();
     let tx_for_worker = tx.clone();
     let port = env::var("PORT").unwrap_or("9999".to_string());
     let client = Arc::new(Client::builder()
@@ -51,7 +51,6 @@ async fn main() {
     };
 
 
-    /*
     let rx = Arc::new(Mutex::new(rx));
 
     for _ in 0..workers {
@@ -66,36 +65,37 @@ async fn main() {
 
             loop {
                 let decision = get_best_processor().await;
-                //println!("{:?}", decision);
                 if decision == ProcessorDecision::FAILING {
                     eprintln!("Processor em estado FAILING. Aguardando...");
-                    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                     continue;
                 }
-
+                // trava o mutex só enquanto faz o recv
                 let maybe_payment = {
                     let mut rx_guard = rx_clone.lock().await;
                     rx_guard.recv().await
                 };
-
-                if let Some(post_payments) = maybe_payment {
-                    let payload = serde_json::to_string(&post_payments).unwrap();
-                    if let Err(e) = process(payload, conn_clone.clone(), client.clone(), decision).await {
-                        eprintln!("Erro ao processar pagamento: {:?}", e);
-                        if let Err(e) = tx_for_worker.send(post_payments).await {
-                            eprintln!("Erro ao tentar colocar o pagamento na fila novamente: {:?}", e);
-                        } else {
-                            eprintln!("Pagamento recolocado na fila.");
+                if let Some(bytes) = maybe_payment {
+                    if let Ok(post_payments) = serde_json::from_slice::<PostPayments>(&bytes) {
+                        let payload = serde_json::to_string(&post_payments).unwrap();
+                        if let Err(e) = process(payload, conn_clone.clone(), client.clone(), decision).await {
+                            eprintln!("Erro ao processar pagamento: {:?}", e);
+                            if let Err(e) = tx_for_worker.send(bytes) {
+                                eprintln!("Erro ao tentar colocar o pagamento na fila novamente: {:?}", e);
+                            } else {
+                                eprintln!("Pagamento recolocado na fila.");
+                            }
                         }
                     }
-                } else {
+                }else{
                     break;
                 }
             }
         });
     }
-    */
 
+
+    /*
     let connection_for_worker = Arc::clone(&connection);
     tokio::spawn(async move {
         let client = Arc::clone(&client);
@@ -120,6 +120,7 @@ async fn main() {
             }
         }
     });
+    */
 
     let app = Router::new()
         .route("/payments", post(payments))

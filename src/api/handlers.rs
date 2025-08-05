@@ -1,6 +1,6 @@
 use crate::domain::entities::{AppState, PaymentsSummary, PaymentsSummaryFilter, SummaryData};
 use crate::infrastructure::{date_to_ts, round2};
-use crate::PostPayments;
+use axum::body::Bytes;
 use axum::extract::{Query, State};
 use axum::{
     http::StatusCode,
@@ -9,7 +9,6 @@ use axum::{
 use redis::aio::ConnectionManager;
 use redis::AsyncCommands;
 use std::string::String;
-use axum::body::Bytes;
 
 pub async fn clear_redis(
     State(state): State<AppState>

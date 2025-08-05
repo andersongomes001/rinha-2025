@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 COPY . .
 RUN rm -rf target
-RUN cargo build --bin worker --release
+RUN RUSTFLAGS="-C target-cpu=skylake" cargo build --bin api --release
 
 
 FROM debian:bookworm-slim
@@ -22,6 +22,6 @@ RUN apt-get update && apt-get install -y \
     libstdc++6 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/target/release/worker /usr/local/bin/
-RUN chmod +x /usr/local/bin/worker
-CMD ["worker"]
+COPY --from=builder /app/target/release/api /usr/local/bin/
+RUN chmod +x /usr/local/bin/api
+CMD ["api"]

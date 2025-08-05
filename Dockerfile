@@ -10,8 +10,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 COPY . .
 RUN rm -rf target
-RUN RUSTFLAGS="-C target-cpu=skylake" cargo build --bin api --release
-#RUN cargo build --bin api --release
+RUN cargo build --bin api --release
 
 
 FROM debian:bookworm-slim

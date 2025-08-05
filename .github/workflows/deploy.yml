@@ -1,0 +1,40 @@
+name: Docker Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  docker-build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Definir variáveis
+        id: vars
+        run: |
+          echo "APP_NAME=rinha-api-2025" >> $GITHUB_ENV
+          echo "DOCKER_USER=andersongomes001" >> $GITHUB_ENV
+          echo "VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "IMAGE_NAME=andersongomes001/rinha-api-2025" >> $GITHUB_ENV
+
+      - name: Login no Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build da imagem Docker padrão
+        run: |
+          docker build -t $IMAGE_NAME:$VERSION -t $IMAGE_NAME:latest .
+
+      - name: Build da imagem Docker skylake
+        run: |
+          docker build -f Dockerfile.skylake -t $IMAGE_NAME:skylake-$VERSION -t $IMAGE_NAME:skylake-latest .
+
+      - name: Push das imagens
+        run: |
+          docker push $IMAGE_NAME:$VERSION
+          docker push $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:skylake-$VERSION
+          docker push $IMAGE_NAME:skylake-latest
