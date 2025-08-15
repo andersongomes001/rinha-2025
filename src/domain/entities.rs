@@ -2,7 +2,7 @@ use redis::aio::ConnectionManager;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use axum::body::Bytes;
-use tokio::sync::mpsc::{UnboundedSender};
+use tokio::sync::mpsc::Sender;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct HealthResponse {
@@ -21,7 +21,7 @@ pub struct HealthStatusAll {
 #[derive(Clone)]
 pub struct AppState {
     pub redis: Arc<ConnectionManager>,
-    pub sender: UnboundedSender<Bytes>
+    pub sender: Sender<Bytes>
 }
 
 #[derive(Deserialize, Serialize, Debug,Clone)]
