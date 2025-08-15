@@ -25,24 +25,23 @@ pub async fn process(payment_json: String, conn: Arc<ConnectionManager>, client:
         "requestedAt" : timestamp_str
     });
     let id = format!("{}", payment.correlation_id);
-    let mut is_failed = false;
+    let mut need_fallback = decision == ProcessorDecision::FALLBACK;
+
     if decision == ProcessorDecision::DEFAULT {
-        for _ in 0..5 {
-            let normal_request = payments_request(&client, PAYMENT_PROCESSOR_DEFAULT_URL.as_str().parse().unwrap(), &payload).await?;
-            let status = normal_request.status();
-            if status.is_success() {
+        for _ in 0..2 {
+            let resp = payments_request(&client, PAYMENT_PROCESSOR_DEFAULT_URL.as_str().parse().unwrap(), &payload).await?;
+            if resp.status().is_success() {
                 store_summary(&mut conn, "default", &id, payment.amount, timestamp_ms).await?;
                 return Ok(());
             }
-            tokio::time::sleep(Duration::from_millis(500)).await;
+            tokio::time::sleep(Duration::from_millis(100)).await;
         }
-        is_failed = true;
+        need_fallback = true;
     }
 
-    if decision == ProcessorDecision::FALLBACK || is_failed {
-        let fallback_request = payments_request(&client, PAYMENT_PROCESSOR_FALLBACK_URL.as_str().parse().unwrap(), &payload).await?;
-        let status = fallback_request.status();
-        if status.is_success() {
+    if need_fallback {
+        let resp = payments_request(&client, PAYMENT_PROCESSOR_FALLBACK_URL.as_str().parse().unwrap(), &payload).await?;
+        if resp.status().is_success() {
             store_summary(&mut conn, "fallback", &id, payment.amount, timestamp_ms).await?;
             return Ok(());
         }

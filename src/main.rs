@@ -14,7 +14,7 @@ use rinha2025::infrastructure::{run_master, run_slave};
 use std::env;
 use std::sync::Arc;
 use axum::body::{Bytes};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{mpsc, Semaphore};
 
 #[tokio::main]
 async fn main() {
@@ -34,11 +34,16 @@ async fn main() {
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or(2);
 
-    let (tx, rx) = mpsc::unbounded_channel::<Bytes>();
+    let (tx, mut rx) = mpsc::channel::<Bytes>(
+        std::env::var("CHANNEL_CAPACITY").ok().and_then(|v| v.parse::<usize>().ok()).unwrap_or(4096)
+    );
     let tx_for_worker = tx.clone();
     let port = env::var("PORT").unwrap_or("9999".to_string());
     let client = Arc::new(Client::builder()
-        //.timeout(Duration::from_millis(300))
+        .connect_timeout(std::time::Duration::from_millis(75))
+        .timeout(std::time::Duration::from_millis(250))
+        .pool_idle_timeout(std::time::Duration::from_secs(5))
+        .tcp_nodelay(true)
         .build()
         .unwrap());
 
@@ -51,48 +56,31 @@ async fn main() {
     };
 
 
-    let rx = Arc::new(Mutex::new(rx));
+    let semaphore = Arc::new(Semaphore::new(workers));
 
-    for _ in 0..workers {
-        let connection_for_worker = Arc::clone(&connection);
-        let client_clone = Arc::clone(&client);
-        let rx_clone = Arc::clone(&rx);
-        let tx_for_worker = tx_for_worker.clone();
+    let connection_for_tasks = Arc::clone(&connection);
+    let client_for_tasks = Arc::clone(&client);
+    let tx_for_requeue = tx_for_worker.clone();
 
-        tokio::spawn(async move {
-            let client = client_clone;
-            let conn_clone = Arc::clone(&connection_for_worker);
-
-            loop {
-                let decision = get_best_processor().await;
-                if decision == ProcessorDecision::FAILING {
-                    eprintln!("Processor em estado FAILING. Aguardando...");
-                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                    continue;
-                }
-                // trava o mutex só enquanto faz o recv
-                let maybe_payment = {
-                    let mut rx_guard = rx_clone.lock().await;
-                    rx_guard.recv().await
-                };
-                if let Some(bytes) = maybe_payment {
-                    if let Ok(post_payments) = serde_json::from_slice::<PostPayments>(&bytes) {
-                        let payload = serde_json::to_string(&post_payments).unwrap();
-                        if let Err(e) = process(payload, conn_clone.clone(), client.clone(), decision).await {
-                            eprintln!("Erro ao processar pagamento: {:?}", e);
-                            if let Err(e) = tx_for_worker.send(bytes) {
-                                eprintln!("Erro ao tentar colocar o pagamento na fila novamente: {:?}", e);
-                            } else {
-                                eprintln!("Pagamento recolocado na fila.");
-                            }
-                        }
+    tokio::spawn(async move {
+        while let Some(bytes) = rx.recv().await {
+            let permit = semaphore.clone().acquire_owned().await.unwrap();
+            let conn_clone = Arc::clone(&connection_for_tasks);
+            let client_clone = Arc::clone(&client_for_tasks);
+            let tx_clone = tx_for_requeue.clone();
+            tokio::spawn(async move {
+                let _permit = permit;
+                if let Ok(post_payments) = serde_json::from_slice::<PostPayments>(&bytes) {
+                    let payload = serde_json::to_string(&post_payments).unwrap();
+                    let decision = get_best_processor().await;
+                    if let Err(e) = process(payload, conn_clone.clone(), client_clone.clone(), decision).await {
+                        let _ = tx_clone.try_send(bytes);
+                        eprintln!("Erro ao processar pagamento: {:?}", e);
                     }
-                }else{
-                    break;
                 }
-            }
-        });
-    }
+            });
+        }
+    });
 
 
     /*
