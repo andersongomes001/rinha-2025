@@ -13,8 +13,9 @@ use rinha2025::infrastructure::redis::get_redis_connection;
 use rinha2025::infrastructure::{run_master, run_slave};
 use std::env;
 use std::sync::Arc;
+use std::thread::sleep;
 use axum::body::{Bytes};
-use tokio::sync::{mpsc, Mutex};
+use tokio::sync::{mpsc, Mutex, Semaphore};
 
 #[tokio::main]
 async fn main() {
@@ -50,14 +51,13 @@ async fn main() {
         }
     };
 
-
     let rx = Arc::new(Mutex::new(rx));
-
     for _ in 0..workers {
         let connection_for_worker = Arc::clone(&connection);
         let client_clone = Arc::clone(&client);
         let rx_clone = Arc::clone(&rx);
         let tx_for_worker = tx_for_worker.clone();
+
 
         tokio::spawn(async move {
             let client = client_clone;
@@ -66,7 +66,7 @@ async fn main() {
             loop {
                 let decision = get_best_processor().await;
                 if decision == ProcessorDecision::FAILING {
-                    eprintln!("Processor em estado FAILING. Aguardando...");
+                    //eprintln!("Processor em estado FAILING. Aguardando...");
                     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
                     continue;
                 }
@@ -93,6 +93,9 @@ async fn main() {
             }
         });
     }
+
+
+
 
 
     /*

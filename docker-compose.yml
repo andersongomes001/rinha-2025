@@ -1,6 +1,6 @@
 x-api_template: &api_template
-  #image: rinha-dev
-  image: andersongomes001/rinha-api-2025:b813caf
+  image: rinha-dev
+  #image: andersongomes001/rinha-api-2025:b813caf
   networks:
     - backend
     - payment-processor
@@ -20,7 +20,7 @@ services:
       REDIS_URL: "redis://redis:6379/"
       PORT: 80
       INSTANCE_ROLE: "master"
-      MAX_WORKERS: 2
+      MAX_WORKERS: 7
     depends_on:
       - redis
   api02:
@@ -33,7 +33,7 @@ services:
       PORT: 80
       INSTANCE_ROLE: "slave"
       WS_MASTER_URL: "ws://api01:9001"
-      MAX_WORKERS: 2
+      MAX_WORKERS: 7
     depends_on:
       - redis
       - api01
@@ -53,7 +53,7 @@ services:
   haproxy:
     image: haproxy:2.8
     ports:
-      - "9999:80"
+      - "9998:80"
     volumes:
       - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
     depends_on:
@@ -71,7 +71,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "9998:80"
+      - "9999:80"
     depends_on:
       - api01
       - api02

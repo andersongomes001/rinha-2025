@@ -66,12 +66,13 @@ pub async fn get_best_processor() -> ProcessorDecision {
     if health.default.failing {
         if let Some(start_ms) = health.default.failing_since {
             if let Some(elapsed) = elapsed_since(start_ms) {
-                if elapsed.as_secs_f32() > 2.0 {
+                if elapsed.as_secs_f32() > 3.0 {
+                    eprintln!("Mais de 3 segundos {:?}",elapsed);
                     return ProcessorDecision::FALLBACK;
                 }
             }
         }
-        return ProcessorDecision::FAILING;
+        //return ProcessorDecision::FAILING;
     }
 
     if health.fallback.failing {
